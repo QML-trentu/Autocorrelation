@@ -48,7 +48,7 @@ def main():
 
     rows, votes = [], []
     seeds = []
-    for sdir in sorted(glob.glob(os.path.join(a.results_dir, "seed_*"))):
+    for sdir in sorted(glob.glob(os.path.join(a.results_dir, "seed_[0-9]*"))):
         seed = int(sdir.rsplit("_", 1)[1])
         files = {m: os.path.join(sdir, f"{m}_predictions_long.csv") for m in METHODS}
         if not all(os.path.exists(f) for f in files.values()):
