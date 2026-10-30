@@ -103,7 +103,7 @@ def add_leakage_log_inset(ax, sub):
     where Leakage is too small to read on the panel's main linear scale.
 
     Exact-zero Leakage values can't be placed on a log axis, so - exactly
-    matching the convention already used for manuscript Figure 3 - they are
+    matching the convention used in the leakage-versus-iteration figure (Figure 4) - they are
     floored to half the smallest nonzero Leakage value observed here, with
     a dotted horizontal line marking that floor so it reads as "below
     detection" rather than a real measured value.
@@ -219,7 +219,7 @@ def build_caption(table):
         "most-converged (iteration 300) integration times (see Table 1 for exact values). "
         "Error bars indicate 95% Wilson score confidence intervals. At iteration 300, "
         "leakage is shown in a log-scale inset, following the same zero-value floor "
-        "convention as Figure 3."
+        "convention as in Figure 4."
     )
 
 

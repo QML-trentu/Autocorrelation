@@ -1,9 +1,36 @@
-"""Detected count rates, photostability and coincidence counts of the 25 experimental emitters (SI Section S10.2).
+# -*- coding: utf-8 -*-
+"""
+Figure_S_emitter_count_rates.py
 
-Reads Experimental_Data/exp_g2_raw_rep_*.csv (two header rows with the single-channel rates of APD1 and APD2 in Hz at each of the nine
-integration times, then tau / iter_1..iter_9 raw coincidence counts) and writes
-  Figure_S_emitter_count_rates.png   (a) total rate at 500 s, (b) representative emitter, (c) RSD, (d) coincidences per bin
-  Emitter_count_statistics.csv       per-emitter values and the summary statistics used in the SI table
+Detected count rates, stability of the rate and coincidence levels of the 25
+experimental emitters.
+
+Reads the original raw files Experimental_Data_Raw/exp_g2_raw_rep_*.csv:
+two header rows with the single-channel rates of APD1 and APD2 (Hz) at each
+of the nine integration times, a "tau,iter_1,...,iter_9" header row, and the
+raw coincidence counts per 0.1-ns delay bin. Files without the two rate rows
+(timing-corrected or normalized files) are skipped.
+
+For every emitter it computes
+  - the total detected rate (APD1 + APD2) at each integration time and at
+    500 s;
+  - the relative standard deviation (RSD) of the total rate over the nine
+    integration times;
+  - the mean number of coincidences per bin at far delays (|tau| > FAR,
+    after re-centering the antibunching dip at zero delay by the fixed
+    timing offset OFFSET of the two detector channels) at each integration
+    time, and its ratio to the accidental level r1 * r2 * dtau * T at 500 s.
+
+Writes (next to this script)
+  Figure_S_emitter_count_rates.png        a) total rate at 500 s, b) total rate of one
+                                          representative emitter at the nine integration
+                                          times, c) RSD of the rate for each emitter,
+                                          d) coincidences per bin versus integration time
+  Emitter_count_statistics.csv            per-emitter values
+  Emitter_count_statistics_summary.csv    median, quartiles, minimum, maximum and mean
+
+Usage:  python Figure_S_emitter_count_rates.py [folder with the raw files]
+        (default: Experimental_Data_Raw next to this script)
 """
 import glob, os, re, sys
 import numpy as np, pandas as pd
@@ -12,9 +39,8 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 HERE = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else os.getcwd()
-_default = r'C:\All_Data\Academia\LabData\Data_2026\Autocorrelation_g2_ML_Project\Experimental_Data_Raw'
-DATA = sys.argv[1] if len(sys.argv) > 1 else (_default if os.path.isdir(_default) else os.path.join(HERE, 'Experimental_Data_Raw'))
-OFFSET = 18.1         # ns: fixed timing offset of the two detector channels in the raw files (Section 2.2 of the main text)
+DATA = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, 'Experimental_Data_Raw')
+OFFSET = 18.1         # ns: fixed timing offset of the two detector channels in the raw files (median of the offsets detected by Step_00)
 T = np.array([1, 2, 5, 10, 20, 50, 100, 200, 500.])
 SHOW_PANEL_LETTERS = False   # True: draw (a)-(d) on the panels; False: leave them off (add the letters by hand)
 FAR = 80.0            # ns: far-delay region |tau| > FAR (after the offset correction) used for the coincidence level
@@ -38,7 +64,7 @@ for f in found:
     data.setdefault(rep, (f, out))
 print(f'{len(data)} raw files with APD rates found in {os.path.abspath(DATA)}; {len(skipped)} files without rate rows skipped; missing indices 1-25: {[k for k in range(1, 26) if k not in data]}')
 if not data: raise SystemExit('No raw files with the APD1/APD2 rate rows were found. Pass the folder of the ORIGINAL raw files (not the preprocessed ones) as the first argument or set DATA.')
-if len(data) != 25: print('NOTE: the numbers quoted in the SI refer to the 25 original raw files.')
+if len(data) != 25: print('NOTE: the statistics are defined for the 25 original raw files.')
 rows, C_far = [], []
 for rep in sorted(data):
     f, (r1, r2, tau, X) = data[rep]

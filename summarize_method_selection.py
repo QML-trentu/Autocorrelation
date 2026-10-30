@@ -10,7 +10,7 @@ label 0 = single = positive class) it computes, at a set of iterations
 (default 10, 30, 50, 60, 100, 200, 300):
 
   1. recall, precision and leakage of LM, Bayesian and MLP with 95% Wilson score
-     intervals (Eq. (5) of the manuscript) -> method_selection_table.csv
+     intervals (Eq. (6) of the manuscript) -> method_selection_table.csv
      (one row per seed/method/iteration) and
      method_selection_summary.csv (primary seed with intervals, plus mean and
      range over all seeds; if iter_to_time_mapping_lookup.csv is present, the

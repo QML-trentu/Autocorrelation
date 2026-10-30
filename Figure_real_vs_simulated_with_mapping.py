@@ -24,6 +24,7 @@ unrelated difference in noise level.
 import os
 import numpy as np
 import pandas as pd
+import matplotlib
 import matplotlib.pyplot as plt
 
 
@@ -68,23 +69,30 @@ SETTINGS = {
     "simulation_data_dir": "Simulation_Results",
 
     "real_file": "exp_g2_raw_rep_1_n1.csv",
+    # Any simulated N=1 file whose injected background fraction is close to
+    # the calibrated value of the real file (see training_labels.csv and
+    # experimental_calibration.csv).
     "sim_file": "g2_raw_rep_28_n1.csv",
-    # Looked for in the current working directory, not simulation_data_dir,
-    # since it's a derived/computed file rather than raw simulation output
-    # - move it or update this path if you keep it elsewhere.
-    "lookup_csv": "Iter_no-to-integration_time/iter_to_time_mapping_lookup.csv",
+    # Mapping lookup written by Compute_iter_to_integration_time_mapping.py;
+    # looked for in the current working directory (it is a derived file, not
+    # raw simulation output) - update this path if you keep it elsewhere.
+    "lookup_csv": "iter_to_time_mapping_lookup.csv",
 
     # Real iterations to show (indices into the 9-point real acquisition
-    # schedule) and their matched simulated iterations (found by looking
-    # up each real time against the mapping curve - see module docstring).
-    # Real iter_1 (1s) was tried first but rejected: at that sparsity, ANY
-    # N=1 file's far-tail bins hold only 0-2 raw counts (a structural
-    # property of the thinning schedule, not specific to one file), which
-    # discretizes g2(tau) into a handful of levels rather than looking
-    # like continuous noise. iter_2 (2s) avoids this while remaining
-    # clearly in the sparse regime.
-    "real_iterations_to_plot": [2, 4, 7],
-    "sim_iterations_to_plot": [6, 27, 270],
+    # schedule, i.e. 1, 2, 5, 10, 20, 50, 100, 200, 500 s). The matched
+    # simulated iterations are NOT typed in by hand: they are looked up
+    # from the mapping curve (see sim_iterations_for_times below), so the
+    # bottom row always corresponds to the same integration times as the
+    # top row. Real times must lie within the range covered by the
+    # mapping (the 300 simulated iterations correspond to about 79 s, so
+    # the 100 s trace (iter_7) cannot be matched: use iter_6 = 50 s).
+    # Real iter_1 (1 s) is not used: at that sparsity ANY N=1 file's far-tail
+    # bins hold only 0-2 raw counts (a structural property of the thinning
+    # schedule, not specific to one file), which discretizes g2(tau) into a
+    # handful of levels rather than looking like continuous noise. iter_2
+    # (2 s) avoids this while remaining clearly in the sparse regime.
+    "real_iterations_to_plot": [2, 4, 6],          # 2, 10, 50 s
+    "sim_iterations_to_plot": None,                # None = look up from the mapping curve
     "real_integration_times_s": [1, 2, 5, 10, 20, 50, 100, 200, 500],
 
     "far_tail_ns": 30.0,       # far-field region used for sim normalization
@@ -95,6 +103,7 @@ SETTINGS = {
 
     "save_path": "figure_real_vs_simulated_with_mapping.png",
     "dpi": 300,
+    "show_plot": True,         # only has an effect if matplotlib uses an interactive backend
 }
 
 
@@ -107,8 +116,7 @@ def load_real_file(filepath):
     row "tau,iter_1,...,iter_9", where every iter_ column is ALREADY
     normalized to g2(tau) and the tau axis is ALREADY timing-corrected
     (re-centered so the dip sits at tau=0) - no further processing is
-    needed here, unlike the raw, pre-Step_00 format this function
-    previously assumed.
+    needed here, unlike the raw, pre-Step_00 format.
     """
     df = pd.read_csv(filepath)
     tau = df["tau"].values
@@ -135,6 +143,34 @@ def normalize_g2_sim(counts, tau, far_tail_ns):
 
 
 # =========================================================
+# MAPPING: real integration time -> simulated iteration
+# =========================================================
+def sim_iterations_for_times(lookup, real_times_s):
+    """For each real integration time, return the simulated iteration whose
+    mapped real time (representative_real_time_s in the lookup table) is
+    closest to it. The mapping covers a limited range (the last simulated
+    iteration corresponds to about 79 s), so a real time beyond it cannot
+    be matched and raises an error rather than being silently clipped."""
+    it = lookup["iteration"].values.astype(int)
+    t = np.maximum.accumulate(lookup["representative_real_time_s"].values.astype(float))
+    extrap = lookup["fraction_extrapolated"].values.astype(float) if "fraction_extrapolated" in lookup else np.zeros(len(t))
+    out = []
+    for target in real_times_s:
+        if target > t[-1]:
+            raise ValueError(
+                f"Real time {target:g} s is beyond the range covered by the mapping "
+                f"(maximum {t[-1]:.1f} s at iteration {it[-1]}). Choose a shorter real "
+                f"iteration (e.g. 50 s) or extend the simulation.")
+        idx = int(np.searchsorted(t, target, side="left"))
+        cands = [j for j in (idx - 1, idx) if 0 <= j < len(t)]
+        j = min(cands, key=lambda k: abs(t[k] - target))
+        note = "  (mapping flagged as extrapolated in the lookup table)" if extrap[j] > 0 else ""
+        print(f"  real {target:g} s  ->  simulated iteration {it[j]}  (mapped time {t[j]:.2f} s){note}")
+        out.append(int(it[j]))
+    return out
+
+
+# =========================================================
 # FIGURE
 # =========================================================
 def make_figure(settings):
@@ -152,8 +188,14 @@ def make_figure(settings):
     lookup = pd.read_csv(require_file(settings["lookup_csv"]))
 
     real_iters = settings["real_iterations_to_plot"]
-    sim_iters = settings["sim_iterations_to_plot"]
     times_s = settings["real_integration_times_s"]
+    sim_iters = settings["sim_iterations_to_plot"]
+    if sim_iters is None:
+        print("Matching real integration times to simulated iterations:")
+        sim_iters = sim_iterations_for_times(lookup, [times_s[it - 1] for it in real_iters])
+    missing = [it for it in sim_iters if f"iter_{it}" not in counts_s.columns]
+    if missing:
+        raise KeyError(f"Simulated file has no column(s) iter_{missing}")
     real_color, sim_color = settings["real_color"], settings["sim_color"]
 
     plt.rcParams.update({
@@ -220,8 +262,14 @@ def make_figure(settings):
 
     plt.savefig(settings["save_path"], dpi=settings["dpi"], bbox_inches="tight")
     print(f"Saved: {settings['save_path']}")
-    plt.show()
-    plt.close()
+    # plt.show() only works with an interactive backend; with a non-interactive
+    # one (e.g. Agg, when running headless or from some IDEs) it just emits
+    # "FigureCanvasAgg is non-interactive" - the figure is already saved above.
+    backend = matplotlib.get_backend().lower()
+    non_interactive = ("agg", "pdf", "ps", "svg", "cairo", "template")
+    if settings.get("show_plot", True) and not any(b in backend for b in non_interactive):
+        plt.show()
+    plt.close(fig)
 
 
 # =========================================================

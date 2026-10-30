@@ -2,14 +2,13 @@
 """
 LM_analysis_fixed_tau1.py
 
-Control experiment for the question: "The lifetime in the Bayesian approach is
-fixed, while it is fitted in the Levenberg-Marquardt approach. How does the
-LM approach perform if the antibunching dip amplitude is the only fit
-parameter and the lifetime is calibrated beforehand?"
+Levenberg-Marquardt (LM) classification with the antibunching lifetime fixed
+to a value calibrated beforehand, compared with the standard LM analysis
+(all parameters free) on identical folds.
 
 Everything except the fitted model is identical to
 LM_analysis_Simulation_data_iterspecific_smoothed.py (same files, same
-stratified 5-fold split with the same seed, same tail normalisation and
+stratified 5-fold split with the same seed, same tail normalization and
 Poisson weights, same per-iteration midpoint threshold calibrated on the
 training files, same EMA smoothing of the margin). Three LM variants are
 compared on exactly the same folds:
@@ -26,7 +25,7 @@ tau1 is calibrated exactly as in the Bayesian script: the median tau1 of the
 full fit to the last iteration of the TRAIN files of each fold
 (Bayesian_analysis_simulation_data_iterspecific.estimate_representative_tau1).
 With tau1 fixed the model is linear in the amplitudes, so the fit is a closed-
-form weighted least-squares solution (no iterative optimiser).
+form weighted least-squares solution (no iterative optimizer).
 
 Optionally the Bayesian classifier is run on the same folds for reference.
 
@@ -55,7 +54,7 @@ VARIANTS = ["LM_free", "LM_tau1_A1", "LM_tau1_A1_A2"]
 
 
 # ---------------------------------------------------------------------------
-# per-file cache: normalised signal and Poisson sigma at the evaluated iterations
+# per-file cache: normalized signal and Poisson sigma at the evaluated iterations
 # ---------------------------------------------------------------------------
 def _load_one(args):
     filepath, eval_iterations, settings = args

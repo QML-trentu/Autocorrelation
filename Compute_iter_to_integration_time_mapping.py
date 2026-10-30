@@ -23,7 +23,7 @@ BASELINE COUNT RATE (counts/bin in the flat far-delay region). This is
 computable in both worlds on equal footing:
     - Real: at each of the instrument's known integration times, via the
       accidental-coincidence formula APD1_rate * APD2_rate * bin_width *
-      T (the same formula Step_0 uses, validated there against the
+      T (the same formula Step_00 uses, validated there against the
       instrument's own normalization).
     - Simulated: the actual far-tail region mean at each iter_#, read
       directly from the raw counts.
@@ -35,7 +35,7 @@ reaches a given baseline level slower (in real seconds) than a bright
 one, even though both would map to the same simulated iter_#. This script
 reports the mapping from EACH real file individually AND a pooled
 median, so the spread across real emitters is visible rather than
-hidden - report the spread in the paper, not just a single number.
+hidden.
 """
 import os
 import re
@@ -47,15 +47,15 @@ import matplotlib.pyplot as plt
 # CONFIGURATION
 # =========================================================
 SETTINGS = {
-    "real_data_dir": ".",
-    "simulated_data_dir": ".",
+    "real_data_dir": "Experimental_Data_Raw",   # original raw files (with the APD1/APD2 rate rows)
+    "simulated_data_dir": "Simulation_Results",  # Step_02 output (g2_raw_rep_*.csv)
 
     # Real filenames are matched by this prefix; simulated files are
     # anything NOT matching this prefix but matching rep_<id>_n<N>.csv.
     "real_file_prefix": "exp_",
 
     # Known integration-time schedule for the real acquisition (seconds) -
-    # must match Step_0/Step_01's hardcoded schedule. Update here if your
+    # must match Step_00/Step_01's hardcoded schedule. Update here if your
     # acquisition schedule ever changes.
     "real_integration_times_s": [1, 2, 5, 10, 20, 50, 100, 200, 500],
 
@@ -64,7 +64,7 @@ SETTINGS = {
     # Far-tail region used to estimate the baseline count rate - kept
     # conservative (well clear of the dip AND any uncorrected ~18ns real
     # timing offset) so this works directly on RAW real files without
-    # needing Step_0's full timing correction first.
+    # needing Step_00's full timing correction first.
     "far_tail_ns": 30.0,
 }
 
@@ -78,7 +78,7 @@ def compute_real_baseline_curve(filepath):
     """
     Returns (times_s, baseline_rate_per_bin) for one real raw file, using
     the accidental-coincidence formula (APD1_rate * APD2_rate * bin_width
-    * T) - matches Step_0's validated baseline derivation, and only needs
+    * T) - matches Step_00's validated baseline derivation, and only needs
     the APD header rows, not the actual counts.
     """
     raw = pd.read_csv(filepath, header=None)

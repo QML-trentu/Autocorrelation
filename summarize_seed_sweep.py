@@ -6,7 +6,8 @@ of how stable the results are across different random train/test splits.
 
 For every seed it recomputes recall / precision / leakage exactly as in the
 paper's Table 1 (pooled out-of-fold predictions at iteration 10 and 300), plus
-the majority-vote ensemble at iteration 300 (Table 4). It then reports, across
+the majority-vote ensemble at iteration 300 (see summarize_method_selection.py
+for the full comparison). It then reports, across
 seeds: mean, SD, min and max of each metric, and for how many seeds each
 method ranking discussed in the paper holds.
 
@@ -58,7 +59,7 @@ def main():
         for m, df in dfs.items():
             for it in ITERS:
                 rows.append(dict(Seed=seed, Method=m, Iteration=it, **metrics(df[df.iteration == it])))
-        # majority vote at 300 (>=2 of 3 say multi), as in Table 4
+        # majority vote at 300 (>=2 of 3 say multi), as in summarize_method_selection.py
         base = None
         for m, df in dfs.items():
             d = df[df.iteration == 300][["file", "true_label", "pred_label"]].copy()
